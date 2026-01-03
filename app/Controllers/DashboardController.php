@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Core\Controller;
+use App\Models\User;
+
+class DashboardController extends Controller {
+
+    public function index() {
+        $userModel = new User();
+        $user = $userModel->find($_SESSION['user_id']);
+
+        if (!$user) {
+            $this->redirect('/login');
+        }
+
+        if (!$user['is_onboarding_complete']) {
+            $this->redirect('/onboarding');
+        }
+
+        $this->view('dashboard/index', ['name' => $user['name']]);
+    }
+
+    public function admin() {
+        $userModel = new User();
+        $role = $userModel->getRole($_SESSION['user_id']);
+
+        if ($role !== 'admin') {
+            die("Access Denied");
+        }
+
+        echo "<h1>Admin Panel</h1><p>Welcome System Admin.</p><a href='/dashboard'>Back to Dashboard</a>";
+    }
+}
