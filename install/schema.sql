@@ -1,4 +1,4 @@
--- Initial Schema
+-- Initial Schema (Phase 01 + Phase 02)
 
 CREATE TABLE IF NOT EXISTS tenants (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -14,8 +14,15 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     is_onboarding_complete TINYINT(1) DEFAULT 0,
+    language VARCHAR(5) DEFAULT 'en',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS languages (
+    code VARCHAR(5) PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    is_enabled TINYINT(1) DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -71,3 +78,6 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 
 -- Seed Roles
 INSERT IGNORE INTO roles (id, name) VALUES (1, 'admin'), (2, 'fleet_manager'), (3, 'driver');
+
+-- Seed Languages
+INSERT IGNORE INTO languages (code, name, is_enabled) VALUES ('en', 'English', 1), ('es', 'Español', 1);

@@ -1,42 +1,74 @@
 <?php
 session_start();
 
+// Need to handle Translator manually here since autoloader and config might not be fully ready if install/index.php is run directly.
+// But we can include the class manually.
 define('ROOT_PATH', dirname(__DIR__));
+require_once ROOT_PATH . '/app/Core/Translator.php';
+
+use App\Core\Translator;
+
+// Helper function
+if (!function_exists('__')) {
+    function __($key, $params = []) {
+        return Translator::t($key, $params);
+    }
+}
+
+// Minimal version of getEnabledLanguages for installer
+function getInstallerLanguages() {
+    $langs = [];
+    $files = glob(ROOT_PATH . '/locales/*', GLOB_ONLYDIR);
+    foreach ($files as $dir) {
+        $code = basename($dir);
+        $langs[] = ['code' => $code, 'name' => strtoupper($code)];
+    }
+    return $langs;
+}
+
+
+// Set Locale for Installer (Simple detection or default EN)
+$locale = 'en';
+if (isset($_GET['lang'])) {
+    $locale = $_GET['lang'];
+    $_SESSION['install_lang'] = $locale;
+} elseif (isset($_SESSION['install_lang'])) {
+    $locale = $_SESSION['install_lang'];
+}
+Translator::getInstance()->setLocale($locale);
+
 $step = $_GET['step'] ?? 1;
 $error = '';
 $success = '';
 
-// Helper to check requirements
 function checkRequirements() {
     $results = [];
     $results['php_version'] = [
-        'label' => 'PHP Version >= 7.4',
+        'label' => __('req_php_version'),
         'status' => version_compare(PHP_VERSION, '7.4.0', '>='),
         'current' => PHP_VERSION
     ];
     $results['pdo'] = [
-        'label' => 'PDO Extension',
+        'label' => __('req_pdo'),
         'status' => extension_loaded('pdo')
     ];
     $results['mysql'] = [
-        'label' => 'MySQL Extension (pdo_mysql)',
+        'label' => __('req_mysql'),
         'status' => extension_loaded('pdo_mysql')
     ];
     $results['json'] = [
-        'label' => 'JSON Extension',
+        'label' => __('req_json'),
         'status' => extension_loaded('json')
     ];
 
-    // Writable folders
     $folders = ['storage', 'storage/logs', 'storage/uploads', 'public/assets'];
     foreach ($folders as $folder) {
         $path = ROOT_PATH . '/' . $folder;
-        // ensure dir exists
         if (!is_dir($path)) {
             @mkdir($path, 0755, true);
         }
         $results[$folder] = [
-            'label' => "Writable: $folder",
+            'label' => __('req_writable', ['folder' => $folder]),
             'status' => is_writable($path)
         ];
     }
@@ -45,7 +77,6 @@ function checkRequirements() {
 }
 
 if ($step == 1) {
-    // Requirements Check
     $requirements = checkRequirements();
     $allPass = true;
     foreach ($requirements as $req) {
@@ -59,19 +90,16 @@ if ($step == 1) {
 }
 
 if ($step == 2) {
-    // DB Configuration
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $host = $_POST['db_host'] ?? 'localhost';
         $name = $_POST['db_name'] ?? '';
         $user = $_POST['db_user'] ?? '';
         $pass = $_POST['db_pass'] ?? '';
 
-        // Test Connection
         try {
             $dsn = "mysql:host=$host;dbname=$name;charset=utf8mb4";
             $pdo = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
-            // Save Config
             $configContent = "<?php\n\n";
             $configContent .= "define('DB_HOST', '$host');\n";
             $configContent .= "define('DB_NAME', '$name');\n";
@@ -80,7 +108,6 @@ if ($step == 2) {
 
             file_put_contents(ROOT_PATH . '/config.php', $configContent);
 
-            // Run Schema
             $sql = file_get_contents(ROOT_PATH . '/install/schema.sql');
             $pdo->exec($sql);
 
@@ -93,7 +120,6 @@ if ($step == 2) {
 }
 
 if ($step == 3) {
-    // Create Admin User
     if (file_exists(ROOT_PATH . '/config.php')) {
         require_once ROOT_PATH . '/config.php';
         try {
@@ -110,40 +136,34 @@ if ($step == 3) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = $_POST['email'];
         $password = $_POST['password'];
-        $name = $_POST['name']; // "System Admin"
+        $name = $_POST['name'];
 
         if ($email && $password) {
-            // Create Admin Tenant
             $stmt = $pdo->prepare("INSERT INTO tenants (name, type) VALUES (?, 'fleet')");
             $stmt->execute(['System Admin']);
             $tenantId = $pdo->lastInsertId();
 
-            // Create User
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, is_onboarding_complete) VALUES (?, ?, ?, ?, 1)");
             $stmt->execute([$tenantId, $name, $email, $hash]);
             $userId = $pdo->lastInsertId();
 
-            // Assign Admin Role (ID 1)
             $stmt = $pdo->prepare("INSERT INTO user_roles (user_id, role_id) VALUES (?, 1)");
             $stmt->execute([$userId]);
 
-            // Lock Installer
             file_put_contents(ROOT_PATH . '/storage/install.lock', date('Y-m-d H:i:s'));
 
-            $success = "Installation Complete! <a href='/'>Go to Login</a>";
-            // Wait, if I go to /, I need to be able to login.
+            $success = __('install_success');
         } else {
-            $error = "Please fill all fields.";
+            $error = __('error_fill_fields');
         }
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TLCDesk Installer</title>
+    <title><?= __('install_title') ?></title>
     <style>
         body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; background: #f4f4f4; }
         .card { background: #fff; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -157,11 +177,21 @@ if ($step == 3) {
         button:disabled { background: #ccc; }
         table { width: 100%; border-collapse: collapse; }
         td, th { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; }
+        .lang-switch { float: right; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>TLCDesk Installation - Step <?= $step ?></h1>
+        <div class="lang-switch">
+             <select onchange="window.location.href='?step=<?= $step ?>&lang='+this.value">
+                <?php foreach (getInstallerLanguages() as $lang): ?>
+                    <option value="<?= $lang['code'] ?>" <?= ($locale == $lang['code']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($lang['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <h1><?= __('install_title') ?> - <?= __('step', ['step' => $step]) ?></h1>
 
         <?php if ($error): ?>
             <p class="error"><?= $error ?></p>
@@ -173,7 +203,7 @@ if ($step == 3) {
 
             <?php if ($step == 1): ?>
                 <form method="POST">
-                    <h3>System Requirements</h3>
+                    <h3><?= __('system_requirements') ?></h3>
                     <table>
                         <?php foreach ($requirements as $req): ?>
                         <tr>
@@ -190,49 +220,49 @@ if ($step == 3) {
                     </table>
                     <br>
                     <?php if ($allPass): ?>
-                        <button type="submit">Next: Database Config</button>
+                        <button type="submit"><?= __('next') ?>: <?= __('db_config') ?></button>
                     <?php else: ?>
-                        <p class="error">Please fix the issues above to continue.</p>
-                        <button type="button" onclick="window.location.reload()">Check Again</button>
+                        <p class="error"><?= __('fix_issues') ?></p>
+                        <button type="button" onclick="window.location.reload()"><?= __('check_again') ?></button>
                     <?php endif; ?>
                 </form>
             <?php elseif ($step == 2): ?>
                 <form method="POST">
-                    <h3>Database Configuration</h3>
+                    <h3><?= __('db_config') ?></h3>
                     <div class="form-group">
-                        <label>Host</label>
+                        <label><?= __('host') ?></label>
                         <input type="text" name="db_host" value="localhost" required>
                     </div>
                     <div class="form-group">
-                        <label>Database Name</label>
+                        <label><?= __('db_name') ?></label>
                         <input type="text" name="db_name" required>
                     </div>
                     <div class="form-group">
-                        <label>User</label>
+                        <label><?= __('user') ?></label>
                         <input type="text" name="db_user" required>
                     </div>
                     <div class="form-group">
-                        <label>Password</label>
+                        <label><?= __('password') ?></label>
                         <input type="password" name="db_pass">
                     </div>
-                    <button type="submit">Install Database</button>
+                    <button type="submit"><?= __('install_db') ?></button>
                 </form>
             <?php elseif ($step == 3): ?>
                 <form method="POST">
-                    <h3>Create Admin Account</h3>
+                    <h3><?= __('create_admin') ?></h3>
                     <div class="form-group">
-                        <label>Name</label>
+                        <label><?= __('name') ?></label>
                         <input type="text" name="name" value="System Admin" required>
                     </div>
                     <div class="form-group">
-                        <label>Email</label>
+                        <label><?= __('email') ?></label>
                         <input type="text" name="email" required>
                     </div>
                     <div class="form-group">
-                        <label>Password</label>
+                        <label><?= __('password') ?></label>
                         <input type="password" name="password" required>
                     </div>
-                    <button type="submit">Complete Installation</button>
+                    <button type="submit"><?= __('complete_install') ?></button>
                 </form>
             <?php endif; ?>
 

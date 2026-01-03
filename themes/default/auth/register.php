@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Register - TLCDesk</title>
+    <title><?= __('register') ?> - TLCDesk</title>
     <style>
         body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
         .card { background: #fff; padding: 30px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 600px; margin: 0 auto; }
@@ -61,7 +61,16 @@
 </head>
 <body>
     <div class="card">
-        <h2>Register</h2>
+        <div style="text-align: right; margin-bottom: 10px;">
+            <select onchange="window.location.href='/language/switch?code='+this.value">
+                <?php foreach (getEnabledLanguages() as $lang): ?>
+                    <option value="<?= $lang['code'] ?>" <?= (\App\Core\Translator::getInstance()->getLocale() == $lang['code']) ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($lang['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <h2><?= __('register') ?></h2>
         <?php if (isset($error)): ?>
             <p style="color: red;"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
@@ -69,78 +78,78 @@
         <form method="POST" action="/register">
             <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
             <div class="form-group">
-                <label>Account Type</label>
+                <label><?= __('account_type') ?></label>
                 <select name="account_type" id="account_type" onchange="toggleFields()">
-                    <option value="driver">Driver</option>
-                    <option value="fleet_manager">Fleet Manager</option>
+                    <option value="driver"><?= __('driver') ?></option>
+                    <option value="fleet_manager"><?= __('fleet_manager') ?></option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Full Name</label>
+                <label><?= __('full_name') ?></label>
                 <input type="text" name="name" required>
             </div>
             <div class="form-group">
-                <label>Email Address</label>
+                <label><?= __('email') ?></label>
                 <input type="email" name="email" required>
             </div>
             <div class="form-group">
-                <label>Password</label>
+                <label><?= __('password') ?></label>
                 <input type="password" name="password" required>
             </div>
 
             <!-- DRIVER FIELDS -->
             <div id="driver-fields">
-                <h3 class="section-title">Driver Details</h3>
+                <h3 class="section-title"><?= __('driver_details') ?></h3>
                 <div class="form-group">
-                    <label>TLC License #</label>
+                    <label><?= __('tlc_license') ?></label>
                     <input type="text" name="tlc_license">
                 </div>
                 <div class="form-group">
-                    <label>TLC Expiration Date</label>
+                    <label><?= __('tlc_expiration') ?></label>
                     <input type="date" name="tlc_expiration">
                 </div>
                 <div class="form-group">
-                    <label>DMV License #</label>
+                    <label><?= __('dmv_license') ?></label>
                     <input type="text" name="dmv_license">
                 </div>
                 <div class="form-group">
-                    <label>DMV Expiration Date</label>
+                    <label><?= __('dmv_expiration') ?></label>
                     <input type="date" name="dmv_expiration">
                 </div>
                 <div class="form-group">
-                    <label>Vehicle Plate</label>
+                    <label><?= __('vehicle_plate') ?></label>
                     <input type="text" name="plate" id="plate" data-optional="true">
                     <label style="display:inline; font-weight: normal;">
                         <input type="checkbox" name="no_vehicle" id="no_vehicle" onclick="togglePlate()" data-optional="true" style="width: auto;">
-                        I don't have a vehicle
+                        <?= __('no_vehicle') ?>
                     </label>
                 </div>
             </div>
 
             <!-- FLEET FIELDS -->
             <div id="fleet-fields" class="hidden">
-                <h3 class="section-title">Fleet Details</h3>
+                <h3 class="section-title"><?= __('fleet_details') ?></h3>
                 <div class="form-group">
-                    <label>Company Name</label>
+                    <label><?= __('company_name') ?></label>
                     <input type="text" name="company_name">
                 </div>
                 <div class="form-group">
-                    <label>Manager Name</label>
+                    <label><?= __('manager_name') ?></label>
                     <input type="text" name="manager_name">
                 </div>
                 <div class="form-group">
-                    <label>Contact Email</label>
+                    <label><?= __('contact_email') ?></label>
                     <input type="email" name="contact_email">
                 </div>
                 <div class="form-group">
-                    <label>Contact Phone</label>
+                    <label><?= __('contact_phone') ?></label>
                     <input type="text" name="contact_phone">
                 </div>
             </div>
 
-            <button type="submit">Create Account</button>
-            <p style="text-align: center;"><a href="/login">Already have an account? Login</a></p>
+            <button type="submit"><?= __('create_account') ?></button>
+            <p style="text-align: center;"><a href="/login"><?= __('already_have_account') ?></a></p>
         </form>
     </div>
 </body>

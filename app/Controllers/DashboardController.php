@@ -27,9 +27,9 @@ class DashboardController extends Controller {
         $role = $userModel->getRole($_SESSION['user_id']);
 
         if ($role !== 'admin') {
-            die("Access Denied");
+            die(__("access_denied"));
         }
 
-        echo "<h1>Admin Panel</h1><p>Welcome System Admin.</p><a href='/dashboard'>Back to Dashboard</a>";
+        $this->view('admin/dashboard/index');
     }
 }
